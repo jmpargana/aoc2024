@@ -1,0 +1,7 @@
+IGNORE = _{ (!ASCII_ALPHANUMERIC ~ ANY)+ }
+
+program = { (context ~ IGNORE? ~ mul_call ~ IGNORE?)* }
+context = { "do()" | "don't()" }
+mul_call = { "mul(" ~ number ~ "," ~ number ~ ")" }
+
+number = @{ ASCII_DIGIT+ }

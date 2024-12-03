@@ -1,0 +1,9 @@
+[package]
+name = "_3"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+pest = "2.7.14"
+pest_derive = "2.7.14"
+regex = "1.11.1"
