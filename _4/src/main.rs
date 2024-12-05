@@ -16,11 +16,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         levels.push(line.chars().collect());
     }
 
-    let total_xmas = xmas_in_mat(levels);
-    // let sum_of_enabled_multiples = sum_mult_parsed_enabled(&buf);
+    let total_xmas = xmas_in_mat(levels.clone());
+    let total_x_mas = x_mas_in_mat(levels);
 
     println!("result 1: {}", total_xmas);
-    // println!("result 2: {}", sum_of_enabled_multiples);
+    println!("result 2: {}", total_x_mas);
 
     Ok(())
 }
@@ -77,6 +77,40 @@ fn xmas_in_mat(given: Vec<Vec<char>>) -> u32 {
     }
 
     counter
+}
+
+fn x_mas_in_mat(matrix: Vec<Vec<char>>) -> i32 {
+    let mut count = 0;
+
+    for i in 0..matrix.len() {
+        for j in 0..matrix[0].len() {
+            if matrix[i][j] == 'A' {
+                if i == 0 || i == matrix.len() - 1 || j == 0 || j == matrix[0].len() - 1 {
+                    continue;
+                }
+
+                let nw = matrix[i - 1][j - 1];
+                let ne = matrix[i - 1][j + 1];
+                let sw = matrix[i + 1][j + 1];
+                let se = matrix[i + 1][j - 1];
+
+                if nw == 'M' && sw == 'S' && ne == 'M' && se == 'S' {
+                    count += 1;
+                }
+                if nw == 'S' && sw == 'M' && ne == 'S' && se == 'M' {
+                    count += 1;
+                }
+                if nw == 'S' && sw == 'M' && ne == 'M' && se == 'S' {
+                    count += 1;
+                }
+                if nw == 'M' && sw == 'S' && ne == 'S' && se == 'M' {
+                    count += 1;
+                }
+            }
+        }
+    }
+
+    count
 }
 
 #[cfg(test)]
@@ -233,5 +267,74 @@ MXMXAXMASX";
 
         assert_eq!(actual, expected);
     }
+
+    #[test]
+    fn should_match_x_mas() {
+        let xmas = "M.S
+.A.
+M.S";
+        let given = str_to_mat(xmas);
+        let expected = 1;
+        let actual = x_mas_in_mat(given);
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn should_match_x_mas_back() {
+        let xmas = "S.M
+.A.
+S.M";
+        let given = str_to_mat(xmas);
+        let expected = 1;
+        let actual = x_mas_in_mat(given);
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn should_match_x_mas_north_south() {
+        let xmas = "M.M
+.A.
+S.S";
+        let given = str_to_mat(xmas);
+        let expected = 1;
+        let actual = x_mas_in_mat(given);
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn should_match_x_mas_south_north() {
+        let xmas = "S.S
+.A.
+M.M";
+        let given = str_to_mat(xmas);
+        let expected = 1;
+        let actual = x_mas_in_mat(given);
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn should_match_all_x_mas() {
+        let xmas = ".M.S......
+..A..MSMS.
+.M.S.MAA..
+..A.ASMSM.
+.M.S.M....
+..........
+S.S.S.S.S.
+.A.A.A.A..
+M.M.M.M.M.
+..........";
+        let given = str_to_mat(xmas);
+        let expected = 9;
+        let actual = x_mas_in_mat(given);
+
+        assert_eq!(actual, expected);
+    }
 }
+
+
 
