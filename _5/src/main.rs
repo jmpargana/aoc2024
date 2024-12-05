@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, VecDeque},
     error::Error,
     fs::File,
     io::{BufRead, BufReader},
@@ -38,10 +38,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let total_mid_valid_lines = sum_correct_page_ordering(&rules, &arrays);
-    // let total_x_mas = x_mas_in_mat(levels);
-    //
+    let total_mid_invalid_lines = sum_incorrect_page_ordering(&rules, &arrays);
+
     println!("result 1: {}", total_mid_valid_lines);
-    // println!("result 2: {}", total_x_mas);
+    println!("result 2: {}", total_mid_invalid_lines);
 
     Ok(())
 }
@@ -58,10 +58,93 @@ fn is_match(rules: &[(i32, i32)], given: &[i32]) -> bool {
     })
 }
 
+fn sort_incorrect(rules: &[(i32, i32)], given: &[i32]) -> Vec<i32> {
+    let mut dg = HashMap::new();
+    for (k, v) in rules.iter() {
+        dg.entry(*k).or_insert(Vec::new()).push(*v);
+    }
+    let dg = extracted_relevant_rules(dg, given);
+    topological_sort(&dg, given)
+}
+
+fn extracted_relevant_rules(graph: HashMap<i32, Vec<i32>>, nums: &[i32]) -> HashMap<i32, Vec<i32>> {
+    let num_set: std::collections::HashSet<i32> = nums.iter().cloned().collect();
+    let mut filtered_graph = HashMap::new();
+
+    for (&node, neighbors) in graph.iter() {
+        if num_set.contains(&node) {
+            let filtered_neighbors: Vec<i32> = neighbors
+                .iter()
+                .cloned()
+                .filter(|&n| num_set.contains(&n))
+                .collect();
+            filtered_graph.insert(node, filtered_neighbors);
+        }
+    }
+
+    filtered_graph
+}
+
+fn topological_sort(graph: &HashMap<i32, Vec<i32>>, arr: &[i32]) -> Vec<i32> {
+    let mut in_degree = HashMap::new();
+    let mut adj_list = HashMap::new();
+
+    for &it in arr {
+        in_degree.insert(it, 0);
+        adj_list.insert(it, Vec::new());
+    }
+
+    for (&u, vvs) in graph {
+        for &v in vvs {
+            adj_list.entry(u).or_default().push(v);
+            *in_degree.entry(v).or_default() += 1;
+        }
+    }
+
+    let mut q: VecDeque<i32> = VecDeque::new();
+
+    for (&n, &degree) in &in_degree {
+        if degree == 0 {
+            q.push_back(n);
+        }
+    }
+
+    let mut sorted_order = Vec::new();
+
+    while let Some(n) = q.pop_front() {
+        sorted_order.push(n);
+
+        if let Some(vvs) = adj_list.get(&n) {
+            for &v in vvs.iter() {
+                if let Some(in_deg) = in_degree.get_mut(&v) {
+                    *in_deg -= 1;
+                    if *in_deg == 0 {
+                        q.push_back(v)
+                    }
+                }
+            }
+        }
+    }
+
+    sorted_order
+}
+
 fn sum_correct_page_ordering(rules: &[(i32, i32)], given: &[Vec<i32>]) -> i32 {
     given
         .iter()
         .filter(|arr| is_match(&rules, &arr))
+        .map(|arr| {
+            let mid = arr.len() / 2;
+            arr[mid]
+        })
+        .sum()
+}
+
+fn sum_incorrect_page_ordering(rules: &[(i32, i32)], given: &[Vec<i32>]) -> i32 {
+    given
+        .iter()
+        .filter(|arr| !is_match(&rules, &arr))
+        .map(|arr| sort_incorrect(&rules, &arr))
         .map(|arr| {
             let mid = arr.len() / 2;
             arr[mid]
@@ -168,6 +251,75 @@ mod tests {
         ];
         let actual = sum_correct_page_ordering(&rules, &given);
         let expected = 143;
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn should_sort_arr_correctly() {
+        let rules = [
+            (47, 53),
+            (97, 13),
+            (97, 61),
+            (97, 47),
+            (75, 29),
+            (61, 13),
+            (75, 53),
+            (29, 13),
+            (97, 29),
+            (53, 29),
+            (61, 53),
+            (97, 53),
+            (61, 29),
+            (47, 13),
+            (75, 47),
+            (97, 75),
+            (47, 61),
+            (75, 61),
+            (47, 29),
+            (75, 13),
+            (53, 13),
+        ];
+        let given = [97, 13, 75, 29, 47];
+        let expected = [97, 75, 47, 29, 13];
+        let actual = sort_incorrect(&rules, &given);
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn should_sum_invalid() {
+        let rules = [
+            (47, 53),
+            (97, 13),
+            (97, 61),
+            (97, 47),
+            (75, 29),
+            (61, 13),
+            (75, 53),
+            (29, 13),
+            (97, 29),
+            (53, 29),
+            (61, 53),
+            (97, 53),
+            (61, 29),
+            (47, 13),
+            (75, 47),
+            (97, 75),
+            (47, 61),
+            (75, 61),
+            (47, 29),
+            (75, 13),
+            (53, 13),
+        ];
+        let given = [
+            vec![75, 47, 61, 53, 29],
+            vec![97, 61, 53, 29, 13],
+            vec![75, 29, 13],
+            vec![75, 97, 47, 61, 53],
+            vec![61, 13, 29],
+            vec![97, 13, 75, 29, 47],
+        ];
+        let actual = sum_incorrect_page_ordering(&rules, &given);
+        let expected = 123;
         assert_eq!(actual, expected);
     }
 }
