@@ -14,10 +14,14 @@ struct Formula {
     nums: Vec<u128>,
 }
 
+type BinOp = fn(u128, u128) -> u128;
+
 fn main() {
     let (_, formulas) = parse_file(include_str!("../puzzle.txt")).unwrap();
     let total_calibration = total_calibration(&formulas);
+    let total_calibration_concat = total_calibration_concat(&formulas);
     println!("result 1: {}", total_calibration);
+    println!("result 2: {}", total_calibration_concat);
 }
 
 fn parse_file(input: &str) -> IResult<&str, Vec<Formula>> {
@@ -35,26 +39,44 @@ fn parse_formula(input: &str) -> IResult<&str, Formula> {
     )(input)
 }
 
-fn has_target(target: u128, nums: &[u128]) -> bool {
+fn dyn_prog(target: u128, nums: &[u128], ops: &[BinOp]) -> bool {
     let mut dp = vec![HashSet::new(); nums.len()];
 
     dp[0].insert(nums[0]);
 
     for i in 1..nums.len() {
         for val in dp[i - 1].clone() {
-            if let Some(nv) = val.checked_mul(nums[i]) {
-                dp[i].insert(nv);
+            for op in ops {
+                dp[i].insert(op(val, nums[i]));
             }
-            dp[i].insert(val + nums[i]);
         }
     }
 
     dp[nums.len() - 1].contains(&target)
 }
 
+fn has_target(target: u128, nums: &[u128]) -> bool {
+    dyn_prog(target, nums, &vec![|a, b| a * b, |a, b| a + b])
+}
+
+fn has_target_concat(target: u128, nums: &[u128]) -> bool {
+    dyn_prog(target, nums, &vec![|a, b| a * b, |a, b| a + b, conc])
+}
+
+fn conc(a: u128, b: u128) -> u128 {
+    format!("{}{}", a, b).parse::<u128>().unwrap()
+}
+
 fn total_calibration(arr: &[Formula]) -> u128 {
     arr.iter()
         .filter(|Formula { target, nums }| has_target(*target, nums))
+        .map(|Formula { target, nums: _ }| target)
+        .sum()
+}
+
+fn total_calibration_concat(arr: &[Formula]) -> u128 {
+    arr.iter()
+        .filter(|Formula { target, nums }| has_target_concat(*target, nums))
         .map(|Formula { target, nums: _ }| target)
         .sum()
 }
@@ -123,6 +145,34 @@ mod tests {
         let (_, actual) = parse_file(input).unwrap();
         let actual = total_calibration(&actual);
         let expected = 3749;
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn should_find_target_concat() {
+        let target = 156;
+        let nums = vec![15, 6];
+
+        let actual = has_target_concat(target, &nums);
+        assert!(actual);
+    }
+
+    #[test]
+    fn should_add_part2() {
+        let input = "292: 11 6 16 20
+3267: 81 40 27
+83: 17 5
+156: 15 6
+7290: 6 8 6 15
+161011: 16 10 13
+192: 17 8 14
+21037: 9 7 18 13
+190: 10 19";
+
+        let (_, actual) = parse_file(input).unwrap();
+        let actual = total_calibration_concat(&actual);
+        let expected = 11387;
 
         assert_eq!(actual, expected);
     }
