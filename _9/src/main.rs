@@ -1,10 +1,10 @@
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 enum BlockType {
     Free,
     File,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 struct Block {
     kind: BlockType,
     size: u8,
@@ -81,10 +81,61 @@ fn checksum(input: &str) -> u128 {
         .sum::<u128>()
 }
 
+// This removes all abtractions and is a close representation of memory
+fn parse_part2(input: &str) -> Vec<(usize, isize)> {
+    let mut fileid = 0;
+    input
+        .trim()
+        .bytes()
+        .enumerate()
+        .map(|(i, b)| {
+            (
+                (b - b'0') as usize,
+                if i % 2 == 0 {
+                    fileid += 1;
+                    fileid - 1
+                } else {
+                    -1
+                },
+            )
+        })
+        .collect()
+}
+
+fn efficient_checksum(mut files: Vec<(usize, isize)>) -> usize {
+    let mut i = files.len() - 1;
+    while i > 0 {
+        let (size, id) = files[i];
+        if id == -1 {
+            i -= 1;
+            continue;
+        }
+        if let Some(j) = files[0..i]
+            .iter()
+            .position(|&(s, id)| id == -1 && size <= s)
+        {
+            let s = files[j].0;
+            files[j] = (size, id);
+            files[i] = (size, -1);
+            if size < s {
+                files.insert(j + 1, (s - size, -1));
+            }
+        }
+        i -= 1;
+    }
+    files
+        .iter()
+        .flat_map(|&(s, id)| (0..s).map(move |_| id))
+        .enumerate()
+        .map(|(i, id)| if id == -1 { 0 } else { i * id as usize })
+        .sum()
+}
+
 fn main() {
     let input = include_str!("../puzzle.txt");
     let checksum = checksum(input);
-
+    let disk = parse_part2(input);
+    println!("result 2: {}", efficient_checksum(disk));
     println!("result 1: {}", checksum);
 }
 
@@ -97,6 +148,15 @@ mod tests {
         let expected = 1928;
         let given = "2333133121414131402";
         let actual = checksum(given);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn should_move_only_available_blocks() {
+        let expected = 2858;
+        let given = "2333133121414131402";
+        let given = parse_part2(given);
+        let actual = efficient_checksum(given);
         assert_eq!(expected, actual);
     }
 }

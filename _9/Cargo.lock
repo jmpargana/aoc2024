@@ -5,3 +5,12 @@ version = 4
 [[package]]
 name = "_9"
 version = "0.1.0"
+dependencies = [
+ "heap",
+]
+
+[[package]]
+name = "heap"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bb1ba12e2ae1c76b997f2992eb74a4c8aa4f0b097827bd307f513d0a3a56c612"
