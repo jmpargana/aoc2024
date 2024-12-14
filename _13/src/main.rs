@@ -1,61 +1,32 @@
-// Each point is a node (x,y)
-// Edges are represented by move
-
-use std::{
-    cmp::Reverse,
-    collections::{BinaryHeap, HashSet},
-};
-
 use nom::{
     bytes::complete::tag,
     character::complete::{multispace0, multispace1, u32},
     combinator::map,
-    multi::{separated_list0, separated_list1},
+    multi::separated_list0,
     sequence::{preceded, tuple},
     IResult,
 };
 
 #[derive(Debug, Clone)]
 struct Game {
-    a: (usize, usize),
-    b: (usize, usize),
-    goal: (usize, usize),
+    a: (i64, i64),
+    b: (i64, i64),
+    goal: (i64, i64),
 }
 
-fn find_min_tokens(g: &Game) -> Option<usize> {
-    let start = (0, 0, 0, 0);
-    let mut min_heap = BinaryHeap::new();
-    min_heap.push(Reverse((0, start)));
-
-    let mut visited = HashSet::new();
-
-    while let Some(Reverse((curr_cost, (x, y, a_count, b_count)))) = min_heap.pop() {
-        if (x, y) == g.goal {
-            return Some(curr_cost);
-        }
-        if visited.contains(&(x, y, a_count, b_count)) {
-            continue;
-        }
-        visited.insert((x, y, a_count, b_count));
-        if a_count < 100 {
-            let a = (x + g.a.0, y + g.a.1, a_count + 1, b_count);
-            if a.0 <= g.goal.0 && a.1 <= g.goal.1 {
-                min_heap.push(Reverse((curr_cost + 3, a)));
-            }
-        }
-
-        if b_count < 100 {
-            let b = (x + g.b.0, y + g.b.1, a_count, b_count + 1);
-            if b.0 <= g.goal.0 && b.1 <= g.goal.1 {
-                min_heap.push(Reverse((curr_cost + 1, b)));
-            }
-        }
+fn find_min_tokens(g: &Game) -> Option<i64> {
+    let (x1, x2) = g.a;
+    let (y1, y2) = g.b;
+    let (z1, z2) = g.goal;
+    let b = (z2 * x1 - z1 * x2) / (y2 * x1 - y1 * x2);
+    let a = (z1 - b * y1) / x1;
+    if (x1 * a + y1 * b, x2 * a + y2 * b) != (z1, z2) {
+        return None;
     }
-
-    None
+    Some(a * 3 + b)
 }
 
-fn total_fewest_tokens(games: &Vec<Game>) -> usize {
+fn total_fewest_tokens(games: &Vec<Game>) -> i64 {
     games
         .iter()
         .map(|g| find_min_tokens(g))
@@ -85,9 +56,9 @@ fn parse_game(input: &str) -> IResult<&str, Game> {
             preceded(multispace1, preceded(tag("Prize:"), parse_prize)),
         )),
         |((ax, ay), (bx, by), (gx, gy))| Game {
-            a: (ax as usize, ay as usize),
-            b: (bx as usize, by as usize),
-            goal: (gx as usize, gy as usize),
+            a: (ax as i64, ay as i64),
+            b: (bx as i64, by as i64),
+            goal: (gx as i64, gy as i64),
         },
     )(input)
 }
@@ -97,12 +68,25 @@ fn parse(input: &str) -> Vec<Game> {
     games
 }
 
+fn add_million(games: &Vec<Game>) -> Vec<Game> {
+    games
+        .iter()
+        .map(|g| Game {
+            a: g.a,
+            b: g.b,
+            goal: (g.goal.0 + 10_000_000_000_000, g.goal.1 + 10_000_000_000_000),
+        })
+        .collect()
+}
+
 fn main() {
     let input = include_str!("../puzzle.txt");
     let games = parse(&input);
     let total = total_fewest_tokens(&games);
+    let total_big = total_fewest_tokens(&add_million(&games));
 
     println!("result 1: {total}");
+    println!("result 2: {total_big}");
 }
 
 #[cfg(test)]
