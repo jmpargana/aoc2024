@@ -78,6 +78,10 @@ fn parse(input: &str) -> Vec<Robot> {
 
 fn product_robots(robots: &mut Vec<Robot>, limits: (isize, isize)) -> usize {
     robots.iter_mut().for_each(|r| r.iter(100, limits));
+    safety_factor(robots, limits)
+}
+
+fn safety_factor(robots: &Vec<Robot>, limits: (isize, isize)) -> usize {
     robots
         .iter()
         .filter_map(|r| r.to_quadrant(limits))
@@ -89,13 +93,28 @@ fn product_robots(robots: &mut Vec<Robot>, limits: (isize, isize)) -> usize {
         .product()
 }
 
+fn xmas_tree(robots: &mut Vec<Robot>, limits: (isize, isize)) -> usize {
+    let (mut min, mut s) = (usize::MAX, 0);
+    for i in 1..=10_000 {
+        robots.iter_mut().for_each(|r| r.iter(1, limits));
+        let safety_factor = safety_factor(robots, limits);
+        if safety_factor < min {
+            min = safety_factor;
+            s = i;
+        }
+    }
+    s
+}
+
 fn main() {
     let input = include_str!("../puzzle.txt");
     let mut robots = parse(input);
     let limits = (101, 103);
     let safety_factor = product_robots(&mut robots, limits);
+    let xmas_tree = xmas_tree(&mut robots, limits);
 
     println!("result 1: {safety_factor}");
+    println!("result 2: {xmas_tree}");
 }
 
 #[cfg(test)]
